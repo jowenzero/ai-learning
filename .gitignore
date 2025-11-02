@@ -1,3 +1,4 @@
 *.csv
 CNN/handwritten-digits-identifier/archive
 CNN/handwritten-digits-identifier/test
+sandbox
