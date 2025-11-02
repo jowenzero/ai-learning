@@ -2,3 +2,6 @@
 CNN/handwritten-digits-identifier/archive
 CNN/handwritten-digits-identifier/test
 sandbox
+.claude
+.vscode
+__pycache__
