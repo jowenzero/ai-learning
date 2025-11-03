@@ -197,7 +197,10 @@ class ObsidianAutoLinker:
         'feature', 'features', 'component', 'components', 'element', 'elements',
         'tool', 'tools', 'framework', 'frameworks', 'library', 'libraries',
         'learning', 'training', 'testing', 'dataset', 'location', 'locations',
-        'command', 'commands', 'network', 'networks'
+        'command', 'commands', 'network', 'networks',
+        # Generic academic/scientific terms (only truly generic ones)
+        'mathematics', 'math', 'maths', 'science', 'sciences',
+        'statistics', 'stat', 'stats'
     }
 
     def __init__(self, vault_path: str, similarity_threshold: float = 0.15,
@@ -370,8 +373,8 @@ class ObsidianAutoLinker:
             sorted_terms = sorted(other_note.searchable_terms, key=len, reverse=True)
 
             for search_term in sorted_terms:
-                # Skip very short terms (less than 4 chars) to avoid false positives
-                if len(search_term) < 4:
+                # Skip very short terms to avoid false positives
+                if len(search_term) < self.min_word_length:
                     continue
 
                 # Skip if this term is in the ignore list
@@ -403,7 +406,7 @@ class ObsidianAutoLinker:
         return mentions
 
     def _get_excluded_ranges(self, content: str) -> List[Tuple[int, int]]:
-        """Get ranges that should not be linked (code blocks, links, URLs)."""
+        """Get ranges that should not be linked (code blocks, links, URLs, tables)."""
         ranges = []
 
         # Code blocks (```)
@@ -421,6 +424,42 @@ class ObsidianAutoLinker:
         # URLs
         for match in re.finditer(r'https?://[^\s\)]+', content):
             ranges.append(match.span())
+
+        # Markdown tables - detect by finding table separator lines (e.g., | --- | --- |)
+        # Then exclude surrounding lines that are part of the table
+        # Match separator line: starts with |, has dashes and pipes
+        separator_pattern = r'^\s*\|[\s\-:|]+\|?\s*$'
+
+        lines = content.split('\n')
+        table_line_indices = set()
+
+        # First pass: find all table separator lines
+        for i, line in enumerate(lines):
+            if re.match(separator_pattern, line) and '---' in line:
+                # Found a table separator - mark this line and adjacent lines as table
+                # Include: previous line (header), separator line, and following lines until blank
+                if i > 0:
+                    table_line_indices.add(i - 1)  # Header line
+                table_line_indices.add(i)  # Separator line
+
+                # Add following lines that start and end with |
+                j = i + 1
+                while j < len(lines):
+                    stripped = lines[j].strip()
+                    if stripped.startswith('|') and (stripped.endswith('|') or '|' in stripped[1:]):
+                        table_line_indices.add(j)
+                        j += 1
+                    else:
+                        # End of table
+                        break
+
+        # Second pass: convert line indices to byte ranges
+        position = 0
+        for i, line in enumerate(lines):
+            if i in table_line_indices:
+                # This line is part of a table, exclude it
+                ranges.append((position, position + len(line)))
+            position += len(line) + 1  # +1 for newline
 
         return ranges
 

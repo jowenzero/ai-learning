@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.1.1] - 2025-11-03 - Bug Fixes & Filter Improvements
+
+### Fixed
+- **min_word_length bug**: Code was hardcoded to check `< 4` instead of using `self.min_word_length` from config
+- **False positive prevention**: Added generic academic terms to ignore list
+  - `mathematics`, `math`, `maths` - prevents linking to "SGD Mathematics"
+  - `science`, `sciences`, `statistics`, `stat`, `stats` - too generic in ML context
+
+### Impact
+- **More accurate links**: Filters out false positives like "mathematics" → "SGD Mathematics"
+- **Quality over quantity**: 68 focused links instead of 112 with false positives
+- **Respects .env**: Now properly uses `MIN_WORD_LENGTH` from configuration
+
+### Example
+**Before**: "mathematics" → `[[2. SGD Mathematics|mathematics]]` ❌ (False positive!)
+**After**: "mathematics" → Not linked ✅ (Too generic)
+
 ## [2.1.0] - 2025-11-03 - Configuration & Display Improvements
 
 ### Added
